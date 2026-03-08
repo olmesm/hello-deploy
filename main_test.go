@@ -107,3 +107,34 @@ func TestVisitMethodNotAllowed(t *testing.T) {
 		t.Fatalf("expected 405, got %d", rec.Code)
 	}
 }
+
+func TestListenAddr(t *testing.T) {
+	tests := []struct {
+		name string
+		host string
+		port string
+		want string
+	}{
+		{
+			name: "all interfaces",
+			host: "0.0.0.0",
+			port: "8080",
+			want: "0.0.0.0:8080",
+		},
+		{
+			name: "empty host uses wildcard",
+			host: "",
+			port: "8080",
+			want: ":8080",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := listenAddr(tt.host, tt.port)
+			if got != tt.want {
+				t.Fatalf("expected %q, got %q", tt.want, got)
+			}
+		})
+	}
+}

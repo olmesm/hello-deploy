@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -166,14 +167,23 @@ func escapeHTML(s string) string {
 	return replacer.Replace(s)
 }
 
+func listenAddr(host, port string) string {
+	if host == "" {
+		return ":" + port
+	}
+	return net.JoinHostPort(host, port)
+}
+
 func main() {
 	app := NewApp()
+	host := getenv("HOST", "0.0.0.0")
 	port := getenv("PORT", "8080")
+	addr := listenAddr(host, port)
 
-	log.Printf("starting server on :%s", port)
+	log.Printf("starting server on %s", addr)
 	log.Printf("data dir: %s", app.dataDir)
 
-	if err := http.ListenAndServe(":"+port, app); err != nil {
+	if err := http.ListenAndServe(addr, app); err != nil {
 		log.Fatal(err)
 	}
 }
