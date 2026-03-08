@@ -63,6 +63,7 @@ func (a *App) handleIndex(w http.ResponseWriter, r *http.Request) {
 </head>
 <body>
   <h1>%s</h1>
+  Version 2
   <p>Visits: %d</p>
   <p>POST to /visit to increment the persisted counter.</p>
   <p>GET /health for health checks.</p>
