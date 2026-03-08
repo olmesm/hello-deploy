@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -105,6 +107,33 @@ func TestVisitMethodNotAllowed(t *testing.T) {
 
 	if rec.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("expected 405, got %d", rec.Code)
+	}
+}
+
+func TestServeHTTPLogsRequest(t *testing.T) {
+	app := newTestApp(t)
+
+	var buf bytes.Buffer
+	originalWriter := log.Writer()
+	originalFlags := log.Flags()
+	log.SetOutput(&buf)
+	log.SetFlags(0)
+	defer log.SetOutput(originalWriter)
+	defer log.SetFlags(originalFlags)
+
+	req := httptest.NewRequest(http.MethodGet, "/health", nil)
+	req.RemoteAddr = "127.0.0.1:12345"
+	rec := httptest.NewRecorder()
+
+	app.ServeHTTP(rec, req)
+
+	output := buf.String()
+	if !strings.Contains(output, "http request method=GET path=/health status=200") {
+		t.Fatalf("expected access log line, got %q", output)
+	}
+
+	if !strings.Contains(output, "remote_addr=127.0.0.1:12345") {
+		t.Fatalf("expected remote address in log line, got %q", output)
 	}
 }
 

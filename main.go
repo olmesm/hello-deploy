@@ -10,12 +10,19 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type App struct {
 	message string
 	dataDir string
 	mux     *http.ServeMux
+}
+
+type loggingResponseWriter struct {
+	http.ResponseWriter
+	statusCode int
+	size       int
 }
 
 func NewApp() *App {
@@ -39,7 +46,34 @@ func (a *App) routes() {
 }
 
 func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	a.mux.ServeHTTP(w, r)
+	start := time.Now()
+	rec := &loggingResponseWriter{
+		ResponseWriter: w,
+		statusCode:     http.StatusOK,
+	}
+
+	a.mux.ServeHTTP(rec, r)
+
+	log.Printf(
+		"http request method=%s path=%s status=%d size=%d duration=%s remote_addr=%s",
+		r.Method,
+		r.URL.RequestURI(),
+		rec.statusCode,
+		rec.size,
+		time.Since(start).Round(time.Millisecond),
+		r.RemoteAddr,
+	)
+}
+
+func (w *loggingResponseWriter) WriteHeader(statusCode int) {
+	w.statusCode = statusCode
+	w.ResponseWriter.WriteHeader(statusCode)
+}
+
+func (w *loggingResponseWriter) Write(data []byte) (int, error) {
+	size, err := w.ResponseWriter.Write(data)
+	w.size += size
+	return size, err
 }
 
 func (a *App) handleIndex(w http.ResponseWriter, r *http.Request) {
@@ -176,6 +210,8 @@ func listenAddr(host, port string) string {
 }
 
 func main() {
+	log.SetOutput(os.Stdout)
+
 	app := NewApp()
 	host := getenv("HOST", "0.0.0.0")
 	port := getenv("PORT", "8080")
